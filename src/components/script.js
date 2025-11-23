@@ -10,14 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsContainer = document.getElementById('results-container');
     const statusMessage = document.getElementById('status-message');
 
-    // --- THIS IS THE KEY CHANGE ---
-    // Since Python serves this script AND the API, we can just use a
-    // relative path. This is much cleaner and more robust.
     const API_URL = '/crawl'; 
 
     // --- Event Listener for Form Submission ---
     form.addEventListener('submit', async (e) => {
-        e.preventDefault(); // Prevent the form from submitting normally
+        e.preventDefault(); 
         const startUrl = startUrlInput.value;
 
         if (!startUrl) {
@@ -26,11 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         setLoading(true);
-        resultsContainer.innerHTML = ''; // Clear old results
+        resultsContainer.innerHTML = ''; 
         statusMessage.textContent = 'Crawling in progress... This may take a few minutes.';
 
         try {
-            // --- API Call ---
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: {
@@ -45,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const results = await response.json();
-            displayResults(results);
+            displayResults(results); // Call the new display function
 
         } catch (error) {
             console.error('Crawl failed:', error);
@@ -77,25 +73,106 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        statusMessage.textContent = `Crawl finished. Found ${results.length} pages.`;
+        statusMessage.textContent = `Crawl finished. Processed ${results.length} URLs.`;
         const fragment = document.createDocumentFragment();
         
         results.forEach(item => {
+            // Create the main card container
             const div = document.createElement('div');
-            // Your uploaded file had a typo 'bg--800', I've fixed it
-            div.className = 'p-3 bg-gray-800 rounded-lg shadow-md break-words';
+            div.className = 'p-3 rounded-lg shadow-md border-l-4 break-words';
             
+            // --- 1. Set Card Style based on Type ---
+            let styleClasses = '';
+            let statusText = `[${item.status}]`;
+
+            // This is the color-coding you liked
+            switch(item.type) {
+                case 'Page':
+                    styleClasses = 'bg-gray-800 border-green-500';
+                    statusText = `[${item.status} OK]`;
+                    break;
+                case 'Blocked':
+                    styleClasses = 'bg-yellow-900 border-yellow-500';
+                    statusText = `[${item.status} BLOCKED]`;
+                    break;
+                case 'Error':
+                    styleClasses = 'bg-red-900 border-red-500';
+                    statusText = `[${item.status} ERROR]`;
+                    break;
+                case 'File':
+                    styleClasses = 'bg-gray-700 border-gray-500';
+                    statusText = `[${item.status} FILE]`;
+                    break;
+                case 'Redirect':
+                    styleClasses = 'bg-blue-900 border-blue-500';
+                    statusText = `[${item.status} REDIRECT]`;
+                    break;
+                default:
+                    styleClasses = 'bg-gray-800 border-gray-500';
+            }
+            div.classList.add(...styleClasses.split(' '));
+
+            // --- 2. Build the Card's Content ---
+            
+            // Status and Title Line
+            const titleLine = document.createElement('div');
+            titleLine.className = 'flex items-center space-x-2 mb-1';
+            
+            const statusSpan = document.createElement('span');
+            statusSpan.className = 'font-mono font-bold text-sm';
+            statusSpan.textContent = statusText;
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'font-semibold text-gray-100';
+            titleSpan.textContent = item.title;
+            
+            titleLine.appendChild(statusSpan);
+            titleLine.appendChild(titleSpan);
+
+            // URL Link
             const link = document.createElement('a');
             link.href = item.url;
             link.textContent = item.url;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
-            link.className = 'text-blue-400 hover:underline';
+            link.className = 'text-blue-400 hover:underline text-sm';
+
+            // Note Line
+            const noteLine = document.createElement('div');
+            noteLine.className = 'text-gray-400 text-xs mt-2 italic';
+            noteLine.textContent = `Note: ${item.note}`;
             
-            const title = document.createTextNode(` - ${item.title}`);
+            // --- NEW: Tech Badges (CDN/WAF) ---
+            const techLine = document.createElement('div');
+            techLine.className = 'flex flex-wrap gap-2 mt-2'; // <-- TYPO IS FIXED HERE
             
+            if (item.services) {
+                // Add CDN Badge (Blue)
+                if (item.services.cdn) {
+                    const cdnBadge = document.createElement('span');
+                    cdnBadge.className = 'text-xs bg-blue-700 text-blue-100 px-2 py-0.5 rounded-full';
+                    cdnBadge.textContent = `CDN: ${item.services.cdn}`;
+                    techLine.appendChild(cdnBadge);
+                }
+                // Add WAF/Security Badge (Red)
+                if (item.services.waf) {
+                    const wafBadge = document.createElement('span');
+                    wafBadge.className = 'text-xs bg-red-700 text-red-100 px-2 py-0.5 rounded-full';
+                    wafBadge.textContent = `Security: ${item.services.waf}`;
+                    techLine.appendChild(wafBadge);
+                }
+            }
+            
+            // Assemble the card
+            div.appendChild(titleLine);
             div.appendChild(link);
-            div.appendChild(title);
+            if(item.note) {
+                div.appendChild(noteLine);
+            }
+            if (item.services && (item.services.cdn || item.services.waf)) {
+                div.appendChild(techLine);
+            }
+            
             fragment.appendChild(div);
         });
 
@@ -104,6 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayError(message) {
         statusMessage.textContent = '';
-        resultsContainer.innerHTML = `<div class="p-3 bg-red-800 text-red-100 rounded-lg">${message}</div>`;
+        resultsContainer.innerHTML = `<div class="p-3 bg-red-900 text-red-100 rounded-lg border-l-4 border-red-500">${message}</div>`;
     }
 });
