@@ -6,3 +6,6 @@ easy-to-use website spider crawler to crawl over all public web pages from a web
 
 ## how to use
 run the installer.bat file to install all the python packages. after that, you are ready to use zorah. just execute zorah.py like normal.
+
+## linux port
+the linux port can be found [here](https://github.com/eightynine77/zorah-web-spider-linux)
